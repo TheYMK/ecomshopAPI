@@ -10,7 +10,7 @@ exports.create = async (req, res) => {
 
 		res.json(category);
 	} catch (err) {
-		console.log(err);
+		console.log(`====> ${err}`);
 		res.status(400).json({
 			error: 'Create category failed'
 		});
@@ -41,7 +41,7 @@ exports.update = async (req, res) => {
 
 		res.json(updated);
 	} catch (err) {
-		console.log(err);
+		console.log(`====> ${err}`);
 		res.status(400).json({
 			error: 'Update category failed'
 		});
@@ -53,7 +53,7 @@ exports.remove = async (req, res) => {
 		const removed = await Category.findOneAndDelete({ slug: req.params.slug });
 		res.json(removed);
 	} catch (err) {
-		console.log(err);
+		console.log(`====> ${err}`);
 		res.status(400).json({
 			error: 'Delete category failed'
 		});
@@ -63,7 +63,7 @@ exports.remove = async (req, res) => {
 exports.getSubs = async (req, res) => {
 	Sub.find({ parent: req.params._id }).exec((err, subs) => {
 		if (err) {
-			console.log(err);
+			console.log(`====> ${err}`);
 			res.status(400).json({
 				error: 'Delete category failed'
 			});

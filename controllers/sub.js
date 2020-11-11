@@ -9,7 +9,7 @@ exports.create = async (req, res) => {
 
 		res.json(sub);
 	} catch (err) {
-		console.log(err);
+		console.log(`====> ${err}`);
 		res.status(400).json({
 			error: 'Create sub category failed'
 		});
@@ -40,7 +40,7 @@ exports.update = async (req, res) => {
 
 		res.json(updated);
 	} catch (err) {
-		console.log(err);
+		console.log(`====> ${err}`);
 		res.status(400).json({
 			error: 'Update sub category failed'
 		});
@@ -52,7 +52,7 @@ exports.remove = async (req, res) => {
 		const removed = await Sub.findOneAndDelete({ slug: req.params.slug });
 		res.json(removed);
 	} catch (err) {
-		console.log(err);
+		console.log(`====> ${err}`);
 		res.status(400).json({
 			error: 'Delete sub failed'
 		});
