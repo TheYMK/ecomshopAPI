@@ -52,18 +52,19 @@ const productSchema = new mongoose.Schema(
 		},
 		color: {
 			type: String,
-			enum: [ 'Black', 'Brown', 'Silver', 'Blue', 'Red' ]
+			enum: [ 'Black', 'Brown', 'Silver', 'Blue', 'Red', 'Gold' ]
 		},
 		brand: {
 			type: String,
 			enum: [ 'Apple', 'Samsung', 'Huawei', 'Microsoft', 'Xiaomi', 'Asus' ]
-		}
-		// ratings: [
-		// 	{
-		// 		star: Number,
-		// 		postedBy: { type: ObjectId, ref: 'User' }
-		// 	}
-		// ]
+		},
+		ratings: [
+			{
+				star: Number,
+				postedBy: { type: ObjectId, ref: 'User' },
+				comment: String
+			}
+		]
 	},
 	{ timestamps: true }
 );
