@@ -186,3 +186,23 @@ exports.productRating = async (req, res) => {
 		});
 	}
 };
+
+exports.listRelated = async (req, res) => {
+	try {
+		const product = await Product.findById(req.params.product_id).exec();
+
+		const relatedProducts = await Product.find({ _id: { $ne: product._id }, category: product.category })
+			.limit(4)
+			.populate('category')
+			.populate('subs')
+			.populate('postedBy')
+			.exec();
+
+		res.json(relatedProducts);
+	} catch (err) {
+		console.log(`====> ${err}`);
+		res.status(400).json({
+			error: err.message
+		});
+	}
+};
