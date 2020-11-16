@@ -206,3 +206,192 @@ exports.listRelated = async (req, res) => {
 		});
 	}
 };
+
+// Search / Filter
+const handleQuery = async (req, res, query) => {
+	try {
+		// $text because in our model title and description have text set to true
+		const products = await Product.find({ $text: { $search: query } })
+			.populate('category', '_id name')
+			.populate('subs', '_id name')
+			.exec();
+
+		return res.json(products);
+	} catch (err) {
+		console.log(`====> ${err}`);
+	}
+};
+
+const handlePrice = async (req, res, price) => {
+	try {
+		const products = await Product.find({
+			price: {
+				$gte: price[0], // greater then the first price in the array
+				$lte: price[1] // less than the last price in the array
+			}
+		})
+			.populate('category', '_id name')
+			.populate('subs', '_id name')
+			.exec();
+
+		res.json(products);
+	} catch (err) {
+		console.log(`====> ${err}`);
+	}
+};
+
+const handleCategory = async (req, res, category) => {
+	try {
+		const products = await Product.find({ category: category })
+			.populate('category', '_id name')
+			.populate('subs', '_id name')
+			.exec();
+
+		res.json(products);
+	} catch (err) {
+		console.log(`====> ${err}`);
+	}
+};
+
+const handleStars = async (req, res, stars) => {
+	Product.aggregate([
+		{
+			$project: {
+				document: '$$ROOT',
+				// title: "$title", we can write all fields like so or we can use the above syntax to get all fields in the product model
+				// description: "$description"
+				floorAverage: {
+					$floor: { $avg: '$ratings.star' }
+				}
+			}
+		},
+		{ $match: { floorAverage: stars } }
+	]).exec((err, aggregate) => {
+		if (err) {
+			console.log(`====> AGGREGATE ERROR: ${err}`);
+			return res.status(400).json({
+				error: err.message
+			});
+		}
+
+		Product.find({ _id: aggregate })
+			.populate('category', '_id name')
+			.populate('subs', '_id name')
+			.exec((err, products) => {
+				if (err) {
+					console.log(`====> PRODUCT AGGREGATE ERROR: ${err}`);
+					return res.status(400).json({
+						error: err.message
+					});
+				}
+
+				res.json(products);
+			});
+	});
+};
+
+const handleSub = async (req, res, sub) => {
+	try {
+		const products = await Product.find({ subs: sub })
+			.populate('category', '_id name')
+			.populate('subs', '_id name')
+			.exec();
+
+		res.json(products);
+	} catch (err) {
+		console.log(`====>  ${err}`);
+		return res.status(400).json({
+			error: err.message
+		});
+	}
+};
+
+const handleShipping = async (req, res, shipping) => {
+	try {
+		const products = await Product.find({ shipping })
+			.populate('category', '_id name')
+			.populate('subs', '_id name')
+			.exec();
+
+		res.json(products);
+	} catch (err) {
+		console.log(`====>  ${err}`);
+		return res.status(400).json({
+			error: err.message
+		});
+	}
+};
+const handleColor = async (req, res, color) => {
+	try {
+		const products = await Product.find({ color })
+			.populate('category', '_id name')
+			.populate('subs', '_id name')
+			.exec();
+
+		res.json(products);
+	} catch (err) {
+		console.log(`====>  ${err}`);
+		return res.status(400).json({
+			error: err.message
+		});
+	}
+};
+const handleBrand = async (req, res, brand) => {
+	try {
+		const products = await Product.find({ brand })
+			.populate('category', '_id name')
+			.populate('subs', '_id name')
+			.exec();
+
+		res.json(products);
+	} catch (err) {
+		console.log(`====>  ${err}`);
+		return res.status(400).json({
+			error: err.message
+		});
+	}
+};
+
+exports.searchFilters = async (req, res) => {
+	const { query, price, category, stars, sub, shipping, color, brand } = req.body;
+
+	if (query) {
+		console.log(`====> query: ${query}`);
+		await handleQuery(req, res, query);
+	}
+	// price will be an array. [20, 200]
+	if (price !== undefined) {
+		console.log(`====> price: ${price}`);
+		await handlePrice(req, res, price);
+	}
+
+	if (category) {
+		console.log(`====> category: ${category}`);
+		await handleCategory(req, res, category);
+	}
+
+	if (stars) {
+		console.log(`====> stars: ${stars}`);
+		await handleStars(req, res, stars);
+	}
+
+	if (sub) {
+		console.log(`====> sub: ${sub}`);
+		await handleSub(req, res, sub);
+	}
+
+	if (shipping) {
+		console.log(`====> shipping: ${shipping}`);
+		await handleShipping(req, res, shipping);
+	}
+
+	if (color) {
+		console.log(`====> color: ${color}`);
+		await handleColor(req, res, color);
+	}
+
+	if (brand) {
+		console.log(`====> brand: ${brand}`);
+		await handleBrand(req, res, brand);
+	}
+};
