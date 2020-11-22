@@ -1,6 +1,8 @@
 const User = require('../models/user');
 const Product = require('../models/product');
 const Cart = require('../models/cart');
+const Coupon = require('../models/coupon');
+const Order = require('../models/order');
 
 exports.userCart = async (req, res) => {
 	// console.log(req.body); // {cart:[]}
@@ -31,8 +33,9 @@ exports.userCart = async (req, res) => {
 			// get price so that we can save total
 			// we do this for security reason because user can manipulate the price in the localstorage. We can't rely on that.
 			// so we want to make sure that the total is calculated in the backend
-			let { price } = await Product.findById(cart[i]._id).select('price').exec();
-			productObject.price = price;
+			let productFromDb = await Product.findById(cart[i]._id).select('price').exec();
+
+			productObject.price = productFromDb.price;
 
 			products.push(productObject);
 		}
@@ -60,7 +63,7 @@ exports.userCart = async (req, res) => {
 	} catch (err) {
 		console.log(`====> ${err}`);
 		res.status(400).json({
-			error: 'Failed to get the currently logged in user'
+			error: err.message
 		});
 	}
 };
@@ -79,7 +82,7 @@ exports.getUserCart = async (req, res) => {
 	} catch (err) {
 		console.log(`====> ${err}`);
 		res.status(400).json({
-			error: 'Failed to get the currently logged in user'
+			error: err.message
 		});
 	}
 };
@@ -93,7 +96,93 @@ exports.emptyCart = async (req, res) => {
 	} catch (err) {
 		console.log(`====> ${err}`);
 		res.status(400).json({
-			error: 'Failed to get the currently logged in user'
+			error: err.message
+		});
+	}
+};
+
+exports.saveAddress = async (req, res) => {
+	try {
+		const userAddress = await User.findOneAndUpdate(
+			{ email: req.user.email },
+			{ address: req.body.address }
+		).exec();
+
+		res.json({ success: true });
+	} catch (err) {
+		console.log(`====> ${err}`);
+		res.status(400).json({
+			error: err.message
+		});
+	}
+};
+
+exports.applyCouponToUserCart = async (req, res) => {
+	try {
+		const { coupon } = req.body;
+
+		const validCoupon = await Coupon.findOne({ name: coupon }).exec();
+		console.log(validCoupon);
+		if (validCoupon === null) {
+			return res.json({
+				error: 'Invalid coupon'
+			});
+		}
+
+		const user = await User.findOne({ email: req.user.email }).exec();
+
+		let { products, cart_total } = await Cart.findOne({ orderedBy: user._id })
+			.populate('products.product', '_id title price')
+			.exec();
+
+		// calculate total after discount
+		let totalAfterDiscount = (cart_total - cart_total * validCoupon.discount / 100).toFixed(2);
+		await Cart.findOneAndUpdate(
+			{ orderedBy: user._id },
+			{ total_after_discount: totalAfterDiscount },
+			{ new: true }
+		).exec();
+
+		res.json(totalAfterDiscount);
+	} catch (err) {
+		console.log(`====> ${err}`);
+		res.status(400).json({
+			error: err.message
+		});
+	}
+};
+
+exports.createOrder = async (req, res) => {
+	try {
+		const { paymentIntent } = req.body.stripeResponse;
+		const user = await User.findOne({ email: req.user.email }).exec();
+
+		let { products } = await Cart.findOne({ orderedBy: user._id }).exec();
+
+		let newOrder = await new Order({
+			products,
+			payment_intent: paymentIntent,
+			orderedBy: user._id
+		}).save();
+
+		// decrement products quantity, increment sold
+		let bulkOption = products.map((item) => {
+			return {
+				updateOne: {
+					filter: { _id: item.product._id }, //IMPORTANT item.product
+					update: { $inc: { quantity: -item.count, sold: +item.count } }
+				}
+			};
+		});
+
+		const updatedProduct = await Product.bulkWrite(bulkOption, {});
+		console.log('PRODUCT QUANTITY-- AND SOLD++', updatedProduct);
+
+		res.json({ success: true });
+	} catch (err) {
+		console.log(`====> ${err}`);
+		res.status(400).json({
+			error: err.message
 		});
 	}
 };
