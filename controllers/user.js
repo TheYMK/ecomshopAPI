@@ -201,3 +201,57 @@ exports.getOrders = async (req, res) => {
 		});
 	}
 };
+
+exports.addToWishList = async (req, res) => {
+	try {
+		const { productId } = req.body;
+
+		const user = await User.findOneAndUpdate(
+			{ email: req.user.email },
+			{ $addToSet: { wishlist: productId } },
+			{ new: true }
+		).exec();
+
+		res.json({
+			success: true
+		});
+	} catch (err) {
+		console.log(`====> ${err}`);
+		res.status(400).json({
+			error: err.message
+		});
+	}
+};
+
+exports.getUserWishlist = async (req, res) => {
+	try {
+		const wishlist = await User.findOne({ email: req.user.email }).select('wishlist').populate('wishlist').exec();
+
+		res.json(wishlist);
+	} catch (err) {
+		console.log(`====> ${err}`);
+		res.status(400).json({
+			error: err.message
+		});
+	}
+};
+
+exports.removeFromWishlist = async (req, res) => {
+	try {
+		const { productId } = req.params;
+		const user = await User.findOneAndUpdate({ email: req.user.email }, { $pull: { wishlist: productId } }).exec();
+
+		res.json({
+			success: true
+		});
+	} catch (err) {
+		console.log(`====> ${err}`);
+		res.status(400).json({
+			error: err.message
+		});
+	}
+};
+
+// addToWishList,
+// getUserWishlist,
+// removeFromWishlist
