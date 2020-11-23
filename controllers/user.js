@@ -186,3 +186,18 @@ exports.createOrder = async (req, res) => {
 		});
 	}
 };
+
+exports.getOrders = async (req, res) => {
+	try {
+		const user = await User.findOne({ email: req.user.email }).exec();
+
+		const userOrders = await Order.find({ orderedBy: user._id }).populate('products.product').exec();
+
+		res.json(userOrders);
+	} catch (err) {
+		console.log(`====> ${err}`);
+		res.status(400).json({
+			error: err.message
+		});
+	}
+};
