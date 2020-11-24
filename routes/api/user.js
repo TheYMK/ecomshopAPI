@@ -13,7 +13,8 @@ const {
 	getOrders,
 	addToWishList,
 	getUserWishlist,
-	removeFromWishlist
+	removeFromWishlist,
+	createCashOrder
 } = require('../../controllers/user');
 
 router.post('/user/cart', authCheck, userCart);
@@ -24,8 +25,9 @@ router.post('/user/address', authCheck, saveAddress);
 router.put('/user/cart/coupon', authCheck, applyCouponToUserCart);
 
 // order
-router.post('/user/order', authCheck, createOrder);
+router.post('/user/order', authCheck, createOrder); // stripe
 router.get('/user/orders', authCheck, getOrders);
+router.post('/user/cash-order', authCheck, createCashOrder); // cash on delivery
 
 // wishlist
 router.post('/user/wishlist', authCheck, addToWishList);

@@ -3,6 +3,7 @@ const Product = require('../models/product');
 const Cart = require('../models/cart');
 const Coupon = require('../models/coupon');
 const Order = require('../models/order');
+const { v4: uuidv4 } = require('uuid');
 
 exports.userCart = async (req, res) => {
 	// console.log(req.body); // {cart:[]}
@@ -191,7 +192,10 @@ exports.getOrders = async (req, res) => {
 	try {
 		const user = await User.findOne({ email: req.user.email }).exec();
 
-		const userOrders = await Order.find({ orderedBy: user._id }).populate('products.product').exec();
+		const userOrders = await Order.find({ orderedBy: user._id })
+			.populate('products.product')
+			.sort('-createdAt')
+			.exec();
 
 		res.json(userOrders);
 	} catch (err) {
@@ -252,6 +256,56 @@ exports.removeFromWishlist = async (req, res) => {
 	}
 };
 
-// addToWishList,
-// getUserWishlist,
-// removeFromWishlist
+exports.createCashOrder = async (req, res) => {
+	try {
+		const { cashOnDelivery, couponApplied } = req.body;
+
+		if (!cashOnDelivery) return res.status(400).send('Create cash order failed');
+
+		const user = await User.findOne({ email: req.user.email }).exec();
+
+		let userCart = await Cart.findOne({ orderedBy: user._id }).exec();
+
+		let finalAmount = 0;
+
+		if (couponApplied && userCart.total_after_discount) {
+			finalAmount = userCart.total_after_discount * 100;
+		} else {
+			finalAmount = userCart.cart_total * 100;
+		}
+
+		let newOrder = await new Order({
+			products: userCart.products,
+			payment_intent: {
+				id: uuidv4(),
+				amount: finalAmount,
+				currency: 'usd',
+				status: 'Cash On Delivery',
+				created: Date.now(),
+				payment_method_types: [ 'cash' ]
+			},
+			orderedBy: user._id,
+			order_status: 'Cash On Delivery'
+		}).save();
+
+		// decrement products quantity, increment sold
+		let bulkOption = userCart.products.map((item) => {
+			return {
+				updateOne: {
+					filter: { _id: item.product._id }, //IMPORTANT item.product
+					update: { $inc: { quantity: -item.count, sold: +item.count } }
+				}
+			};
+		});
+
+		const updatedProduct = await Product.bulkWrite(bulkOption, {});
+		console.log('PRODUCT QUANTITY-- AND SOLD++', updatedProduct);
+
+		res.json({ success: true });
+	} catch (err) {
+		console.log(`====> ${err}`);
+		res.status(400).json({
+			error: err.message
+		});
+	}
+};
